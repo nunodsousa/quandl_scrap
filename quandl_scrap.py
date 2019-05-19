@@ -172,17 +172,17 @@ if __name__ == "__main__":
     Heating_Oil = {'exchange': 'CME', 'ticker': 'HO'}
     Gasoline = {'exchange': 'CME', 'ticker': 'RB'}
 
-    Energy = [WTI_Crude_Oil, Natural_Gas, Heating_Oil, Gasoline]
+    Instruments = [WTI_Crude_Oil, Natural_Gas, Heating_Oil, Gasoline]
 
     list_to_download = []
 
-    for E in Energy:
+    for instrument in Instruments:
 
-        code = continuous_description[(continuous_description['ticker'] == E['ticker']) & \
-                                      (continuous_description['exchange'] == E['exchange'])]['code'].values[0]
-        num = continuous_description[(continuous_description['ticker'] == E['ticker']) & \
-                                     (continuous_description['exchange'] == E['exchange'])]['number'].values[0]
-        list_to_download.append((code, num, E['ticker'], E['exchange']))
+        code = continuous_description[(continuous_description['ticker'] == instrument['ticker']) & \
+                                      (continuous_description['exchange'] == instrument['exchange'])]['code'].values[0]
+        num = continuous_description[(continuous_description['ticker'] == instrument['ticker']) & \
+                                     (continuous_description['exchange'] == instrument['exchange'])]['number'].values[0]
+        list_to_download.append((code, num, instrument['ticker'], instrument['exchange']))
 
     for contract_class in list_to_download:
         print('Contract Class: ', contract_class)
