@@ -17,13 +17,14 @@ from datetime import timedelta
 import MySQLdb as mdb
 from sqlalchemy import create_engine
 
-def download_data(ticker, code, num, start_date=None):
+def download_data(ticker, code, num, quandl_authtoken, start_date=None):
     """
     This function downloads the data from quandl.
 
     :param ticker: of the instrument
     :param code: quandl code
     :param num: number of the continuous contract
+    :param quandl_authtoken: Quandl authorization token
     :param start_date: starting date
     :return: pandas dataframe with data.
     """
@@ -32,7 +33,8 @@ def download_data(ticker, code, num, start_date=None):
 
     for gen in range(1, num + 1):
         string = code + str(gen)
-        data_temp = quandl.get(string, authtoken="", start_date=start_date)
+
+        data_temp = quandl.get(string, authtoken=quandl_authtoken, start_date=start_date)
         data_temp['Generic'] = ticker + str(gen)
         data_temp['Ticker'] = ticker
         data = pd.concat([data, data_temp])
@@ -64,7 +66,7 @@ def checkTableExists(dbcon, database=None, tablename=None):
         return None
 
 
-def get_data(database, name, ticker, code, gen):
+def get_data(database, name, ticker, code, gen, quandl_authtoken):
     """
     Function responsible to make the connection with the database.
     Also this function checks if the database already exists and decides if we are going to create the
@@ -75,6 +77,7 @@ def get_data(database, name, ticker, code, gen):
     :param ticker: ticker of the instrument
     :param code: quandl code to make the download.
     :param gen: Number of the generic
+    :param quandl_authtoken: Quandl authorization token
     :return: It doesn't return nothing
     """
 
@@ -90,7 +93,7 @@ def get_data(database, name, ticker, code, gen):
     if (checkTable == False):
         print('Table not in the Database.')
         print('Downloading data...')
-        data = download_data(ticker, code, gen, start_date=None)
+        data = download_data(ticker, code, gen, quandl_authtoken, start_date=None)
         print('[Done]')
 
         print('Creating table...')
@@ -109,7 +112,7 @@ def get_data(database, name, ticker, code, gen):
         print('Downloading data...')
         last_date = last_date + timedelta(days=1)
         start_date = "{}-{}-{}".format(last_date.year, last_date.month, last_date.day)
-        data_to_append = download_data(ticker, code, 1, start_date=start_date)
+        data_to_append = download_data(ticker, code, 1, quandl_authtoken, start_date=start_date)
         print('[Done]')
 
         print('Appending to table...')
@@ -117,13 +120,46 @@ def get_data(database, name, ticker, code, gen):
         print('[Done]')
     con_engine.close()
 
+def load_credentials(path_credentials):
+
+    with open(path_credentials + 'database_credentials.txt') as f:
+        for i, line in enumerate(f):
+            if (i == 0):
+                db_host = line.split("=")[1].rstrip()
+                print(db_host)
+            if (i == 1):
+                db_user = line.split("=")[1].rstrip()
+                print(db_user)
+            if (i == 2):
+                db_pass = line.split("=")[1].rstrip()
+                print(db_pass)
+            if (i == 3):
+                db_name = line.split("=")[1].rstrip()
+                print(db_name)
+            if (i == 4):
+                host_port = int(line.split("=")[1].rstrip())
+                print(host_port)
+
+    credentials = {'db_host': db_host, 'db_user': db_user, 'db_pass': db_pass, 'db_name': db_name,
+                   'host_port': host_port}
+
+    # read credencials
+    with open(path_credentials + 'quandl_credentials.txt') as f:
+        for line in f:
+            authtoken = line.split("=")[1]
+
+    quandl_authtoken = authtoken
+
+    return credentials, quandl_authtoken
+
+
 if __name__ == "__main__":
 
 
     path = 'data_description/'
+    path_credentials = 'credentials/'
 
-    credentials = {'db_host': '192.168.1.x', 'db_user': 'username', 'db_pass': 'yourpassword', 'db_name': 'CME',
-                   'host_port': 3306}
+    credentials, quandl_authtoken = load_credentials(path_credentials)
 
     con = mdb.connect(host=credentials['db_host'], user=credentials['db_user'],
                       passwd=credentials['db_pass'], db=credentials['db_name'], port=credentials['host_port'])
@@ -152,4 +188,4 @@ if __name__ == "__main__":
         print('Contract Class: ', contract_class)
         for gen_i in range(1, contract_class[1] + 1):
             print(contract_class[3], contract_class[2] + str(gen_i), contract_class[2], contract_class[0], gen_i)
-            get_data(contract_class[3], contract_class[2] + str(gen_i), contract_class[2], contract_class[0], gen_i)
+            get_data(contract_class[3], contract_class[2] + str(gen_i), contract_class[2], contract_class[0], gen_i, quandl_authtoken)
